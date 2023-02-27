@@ -180,6 +180,7 @@ public:
                          const std::vector<Value *> &values,
                          const location &loc);
   void        CreateSignal(Value *ctx, Value *sig, const location &loc);
+  CallInst   *CreateExternal(Value *ctx, const location &loc);
   void        CreateOverrideReturn(Value *ctx, Value *rc);
   void        CreateHelperError(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc);
   void        CreateHelperErrorCond(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc, bool compare_zero=false);

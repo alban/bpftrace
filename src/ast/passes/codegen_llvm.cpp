@@ -1276,6 +1276,10 @@ void CodegenLLVM::visit(Call &call)
     expr_ = ret;
     skb_output_id_++;
   }
+  else if (call.func == "external") {
+    Value *ret = b_.CreateExternal(ctx_, call.loc);
+    expr_ = ret;
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";

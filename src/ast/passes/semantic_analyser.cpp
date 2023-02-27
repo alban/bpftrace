@@ -1367,6 +1367,13 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt32();
   }
+  else if (call.func == "external") {
+    check_assignment(call, false, false, false);
+    if (!check_varargs(call, 0, 0)) {
+      return;
+    }
+    call.type = CreateUInt64();
+  }
   else
   {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";

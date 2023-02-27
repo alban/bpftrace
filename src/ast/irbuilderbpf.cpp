@@ -1405,6 +1405,18 @@ void IRBuilderBPF::CreateSignal(Value *ctx, Value *sig, const location &loc)
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_send_signal, loc);
 }
 
+CallInst *IRBuilderBPF::CreateExternal(Value *ctx, const location &loc)
+{
+  // Return: 0 or error
+  assert(ctx && ctx->getType() == getInt8PtrTy());
+  FunctionType *external_func_type = FunctionType::get(getInt64Ty(), false);
+  return CreateHelperCall(libbpf::BPF_FUNC_get_current_pid_tgid,
+                          external_func_type,
+                          {},
+                          "get_pid_tgid",
+                          &loc);
+}
+
 void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
 {
   // long bpf_override_return(struct pt_regs *regs, u64 rc)
