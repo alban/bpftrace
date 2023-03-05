@@ -747,10 +747,30 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       long unsigned int additional_ins = 0;
 
       long unsigned int i;
+      struct bpf_func_info finfos[2];
       for (i = 0; i < prog_len / sizeof(struct bpf_insn); i++) {
         if (patched_insns[i].code == (BPF_JMP | BPF_CALL) && patched_insns[i].imm == 250) {
           additional_ins = 2;
-          printf("Alban: found call external at inst #%lu\n", i);
+
+          const char* env_id = std::getenv("BPFTRACE_EXTERNAL_BTF_ID");
+          const char* env_type1 = std::getenv("BPFTRACE_EXTERNAL_BTF_TYPE1");
+          const char* env_type2 = std::getenv("BPFTRACE_EXTERNAL_BTF_TYPE2");
+          printf("Alban: env: '%s' '%s' '%s'\n", env_id, env_type1, env_type2);
+
+          finfos[0].insn_off = 0;
+          finfos[0].type_id = atoi(env_type1);
+          finfos[1].insn_off = nins;
+          finfos[1].type_id = atoi(env_type2);
+
+          opts.func_info = &finfos;
+          opts.func_info_cnt = 2;
+          opts.func_info_rec_size = sizeof(struct bpf_func_info);
+
+          opts.prog_btf_fd = bpf_btf_get_fd_by_id(atoi(env_id));
+
+          printf("Alban: found call external at inst #%lu. "
+                "Adding finfo btf: %d %d\n", i,
+                opts.prog_btf_fd, finfos[0].type_id);
           break;
         }
       }
