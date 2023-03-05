@@ -1412,7 +1412,7 @@ CallInst *IRBuilderBPF::CreateExternal(Value *ctx, const location &loc)
   FunctionType *external_func_type = FunctionType::get(getInt64Ty(), false);
   return CreateHelperCall(libbpf::bpf_func_id(250),
                           external_func_type,
-                          {},
+                          { ctx },
                           "external",
                           &loc);
 }
