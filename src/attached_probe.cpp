@@ -740,17 +740,54 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         opts.kern_version = version;
       }
 
+      printf("###\nAlban: Patching ebpf prog (%lu instructions)\n", prog_len / sizeof(struct bpf_insn));
+
+      struct bpf_insn *patched_insns = reinterpret_cast<struct bpf_insn *>(insns);
+      long unsigned int nins = prog_len / sizeof(struct bpf_insn);
+      long unsigned int additional_ins = 0;
+
+      long unsigned int i;
+      for (i = 0; i < prog_len / sizeof(struct bpf_insn); i++) {
+        if (patched_insns[i].code == (BPF_JMP | BPF_CALL) && patched_insns[i].imm == 250) {
+          additional_ins = 2;
+          printf("Alban: found call external at inst #%lu\n", i);
+          break;
+        }
+      }
+
+      patched_insns = reinterpret_cast<struct bpf_insn *>(calloc(sizeof(struct bpf_insn), nins + additional_ins));
+      memcpy(patched_insns, insns, prog_len);
+      if (patched_insns != 0) {
+        patched_insns[nins].code = BPF_MOV | BPF_ALU64;  // r0 = 0
+        patched_insns[nins].imm = 42;                    // r0 = 42
+        patched_insns[nins+1].code = BPF_JMP | BPF_EXIT; // exit
+      }
+
+      for (i = 0; i < prog_len / sizeof(struct bpf_insn); i++) {
+        printf("Alban: inst #%lu: op=%.2x code=0x%.2x imm=%d\n",
+               i, BPF_OP(patched_insns[i].code), patched_insns[i].code,
+               patched_insns[i].imm);
+        if (patched_insns[i].code == (BPF_JMP | BPF_CALL) && patched_insns[i].imm == 250) {
+          patched_insns[i].src_reg = BPF_PSEUDO_CALL;
+          patched_insns[i].imm = nins - i - 1; // pc-relative offset to another bpf function
+          printf("Alban:   found BPF_CALL to external at #%lu: %x (new_imm=%d)\n", i,
+                 patched_insns[i].code, patched_insns[i].imm);
+        }
+      }
+
       {
         // Redirect stderr, so we don't get error messages from libbpf
         StderrSilencer silencer;
         if (bt_debug == DebugLevel::kNone)
           silencer.silence();
 
+        std::cout << "Alban: bpf_prog_load: " << prog_len / sizeof(struct bpf_insn) << std::endl;
+
         progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
                                 name.c_str(),
                                 license,
-                                reinterpret_cast<struct bpf_insn *>(insns),
-                                prog_len / sizeof(struct bpf_insn),
+                                reinterpret_cast<struct bpf_insn *>(patched_insns),
+                                prog_len / sizeof(struct bpf_insn) + additional_ins,
                                 &opts);
       }
 

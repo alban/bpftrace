@@ -1410,10 +1410,10 @@ CallInst *IRBuilderBPF::CreateExternal(Value *ctx, const location &loc)
   // Return: 0 or error
   assert(ctx && ctx->getType() == getInt8PtrTy());
   FunctionType *external_func_type = FunctionType::get(getInt64Ty(), false);
-  return CreateHelperCall(libbpf::BPF_FUNC_get_current_pid_tgid,
+  return CreateHelperCall(libbpf::bpf_func_id(250),
                           external_func_type,
                           {},
-                          "get_pid_tgid",
+                          "external",
                           &loc);
 }
 
